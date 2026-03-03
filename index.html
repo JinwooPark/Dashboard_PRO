@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Performance Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Q.ANALYSIS</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="active" id="menu-dashboard"><i data-lucide="home"></i> <span
+                        data-i18n="menu_dashboard">대시보드</span></a>
+                <a href="#" id="menu-devices"><i data-lucide="list"></i> <span data-i18n="menu_devices">기기 목록</span></a>
+                <a href="#" id="menu-analysis"><i data-lucide="bar-chart-2"></i> <span
+                        data-i18n="menu_analysis">분석</span></a>
+                <a href="#" id="menu-settings"><i data-lucide="settings"></i> <span
+                        data-i18n="menu_settings">설정</span></a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 data-i18n="dashboard_title">디바이스 관리 대시보드</h1>
+                    <p class="subtitle" data-i18n="dashboard_subtitle">실시간 기기 상태 분석 및 통계</p>
+                </div>
+                <div class="header-right">
+                    <div class="data-controls">
+                        <select id="lang-select" class="btn-upload">
+                            <option value="ko">한국어</option>
+                            <option value="en">English</option>
+                        </select>
+                        <label for="csv-upload" class="btn-upload">
+                            <i data-lucide="file-up"></i> <span data-i18n="select_csv">CSV 파일 선택</span>
+                        </label>
+                        <input type="file" id="csv-upload" accept=".csv" style="display: none;">
+                        <button class="btn-refresh" id="refresh-btn">
+                            <i data-lucide="refresh-cw"></i> <span data-i18n="refresh">새로고침</span>
+                        </button>
+                    </div>
+                    <span id="last-updated" data-i18n="last_updated">최근 업데이트: -</span>
+                    <span id="status-msg" style="font-size: 0.75rem; color: var(--warning);"
+                        data-i18n="loading_data">데이터를 불러오는 중...</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Content Wrapper -->
+            <div id="dashboard-view-wrapper">
+                <!-- Map Section (TOP) -->
+                <section class="map-section glass">
+                    <div class="section-header">
+                        <h3 data-i18n="map_title">사이트 위치 지도 (미국)</h3>
+                        <p class="subtitle" data-i18n="map_subtitle">위도/경도 기반 기기 분포 현황</p>
+                    </div>
+                    <div id="map"
+                        style="height: 500px; width: 100%; border-radius: 0.75rem; margin-top: 1rem; z-index: 1;">
+                    </div>
+                </section>
+
+                <!-- Stats Grid -->
+                <section class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-icon blue"><i data-lucide="cpu"></i></div>
+                        <div class="stat-info">
+                            <h3 data-i18n="total_devices">전체 디바이스</h3>
+                            <p class="stat-value" id="total-devices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon green"><i data-lucide="check-circle"></i></div>
+                        <div class="stat-info">
+                            <h3 data-i18n="normal_working">정상 작동</h3>
+                            <p class="stat-value" id="normal-devices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon yellow"><i data-lucide="alert-triangle"></i></div>
+                        <div class="stat-info">
+                            <h3 data-i18n="warning_alerts">경고 알림</h3>
+                            <p class="stat-value" id="warning-devices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon red"><i data-lucide="x-circle"></i></div>
+                        <div class="stat-info">
+                            <h3 data-i18n="error_occurrence">오류 발생</h3>
+                            <p class="stat-value" id="error-devices">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Charts Section (Summary Charts Only) -->
+                <section class="charts-section">
+                    <div class="chart-container glass">
+                        <h3 data-i18n="status_distribution">기기 상태 분포</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container glass">
+                        <h3 data-i18n="state_analysis_title">미국 주별 PV 용량 및 AC 모듈 현황 (AACES7601A 제외)</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="stateAnalysisChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Analysis View Wrapper -->
+            <div id="analysis-view-wrapper" class="hidden">
+                <section class="charts-section">
+                    <div class="chart-container glass">
+                        <h3 data-i18n="version_distribution_title">EMS/GEM 버전별 사이트 수</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="versionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container glass">
+                        <h3 data-i18n="monthly_install_title">월별 사이트 설치 현황</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="monthlyInstallChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+                <section class="charts-section">
+                    <div class="chart-container glass">
+                        <h3 data-i18n="consumption_ct_title">Consumption CT 종류별 사이트 수</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="consumptionCTChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container glass">
+                        <h3 data-i18n="external_production_ct_title">External Production CT 설치 유무</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="externalProductionCTChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Settings View Wrapper -->
+            <div id="settings-view-wrapper" class="hidden">
+                <div class="settings-container">
+                    <section class="settings-section glass">
+                        <h2 data-i18n="settings_preferences">사용자 설정</h2>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4 data-i18n="theme_setting">테마 설정</h4>
+                                <p data-i18n="theme_description">다크 모드와 라이트 모드를 전환합니다.</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="switch">
+                                    <input type="checkbox" id="theme-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4 data-i18n="auto_refresh_setting">자동 데이터 새로고침</h4>
+                                <p data-i18n="auto_refresh_description">데이터를 자동으로 갱신할 주기를 선택합니다.</p>
+                            </div>
+                            <div class="setting-control">
+                                <select id="auto-refresh-select" class="btn-upload" style="margin: 0;">
+                                    <option value="0" data-i18n="refresh_none">없음</option>
+                                    <option value="300000" data-i18n="refresh_5min">5분</option>
+                                    <option value="600000" data-i18n="refresh_10min">10분</option>
+                                    <option value="1800000" data-i18n="refresh_30min">30분</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section glass" style="margin-top: 1.5rem;">
+                        <h2 data-i18n="system_info">시스템 정보</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label" data-i18n="app_version">앱 버전</span>
+                                <span class="info-value">v1.2.0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label" data-i18n="last_build">마지막 빌드</span>
+                                <span class="info-value">2026-02-22</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Table Section (Device List View) -->
+            <section class="table-section glass" id="devices-view-wrapper">
+                <div class="table-header">
+                    <h3 data-i18n="device_list_detail">상세 기기 목록</h3>
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="table-search" data-i18n-placeholder="search_placeholder"
+                                placeholder="시리얼 번호 또는 주소 검색...">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="device-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="Status" data-i18n="col_status">상태 <i data-lucide="chevrons-up-down"></i>
+                                </th>
+                                <th data-sort="Site ID" data-i18n="col_site_id">사이트 ID <i
+                                        data-lucide="chevrons-up-down"></i></th>
+                                <th data-sort="Serial No." data-i18n="col_serial_no">시리얼 번호 <i
+                                        data-lucide="chevrons-up-down"></i></th>
+                                <th data-sort="Model Name" data-i18n="col_model_name">모델명 <i
+                                        data-lucide="chevrons-up-down"></i></th>
+                                <th data-sort="PV Capacity" data-i18n="col_pv_capacity">PV 용량 <i
+                                        data-lucide="chevrons-up-down"></i></th>
+                                <th data-i18n="col_address">주소</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Data will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span id="table-info">총 0개의 기기 중 0개 표시</span>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="main.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

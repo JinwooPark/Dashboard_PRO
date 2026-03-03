@@ -1,0 +1,13 @@
+{
+  "name": "dashboard-pro",
+  "version": "1.0.0",
+  "description": "Device Performance Dashboard",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
