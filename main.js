@@ -110,13 +110,15 @@ const translations = {
 
 function setLanguage(lang) {
     currentLang = lang;
+    localStorage.setItem('dashboard_lang', lang);
+
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (translations[lang][key]) {
-            // If there's an icon, we need to preserve it
+            // Preserve the icon if it exists
             const icon = el.querySelector('i');
             if (icon) {
-                // Clear text nodes but keep the icon
+                // Clear existing text but keep the icon
                 Array.from(el.childNodes).forEach(node => {
                     if (node.nodeType === Node.TEXT_NODE) el.removeChild(node);
                 });
@@ -134,16 +136,16 @@ function setLanguage(lang) {
         }
     });
 
-    // Handle special elements like last-updated if they have content
     const lastUpdated = document.getElementById('last-updated');
-    if (lastUpdated.innerText.includes(':')) {
+    if (lastUpdated && lastUpdated.innerText.includes(':')) {
         const time = lastUpdated.innerText.split(': ')[1] || '-';
         lastUpdated.innerText = translations[lang].last_updated + time;
     }
 
     if (deviceData.length > 0) {
-        initCharts(); // Re-render charts with new titles
-        renderTable(deviceData); // Update table info
+        updateUI();
+        initCharts();
+        renderTable(deviceData);
     }
 }
 
@@ -688,15 +690,7 @@ function setupEventListeners() {
     });
 }
 
-function setLanguage(lang) {
-    currentLang = lang;
-    localStorage.setItem('dashboard_lang', lang);
-    updateUI();
-    if (deviceData.length > 0) {
-        initCharts();
-        renderTable(deviceData);
-    }
-}
+
 
 let refreshInterval;
 
