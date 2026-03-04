@@ -193,10 +193,13 @@
                     <section class="settings-section glass">
                         <h2 data-i18n="settings_preferences">사용자 설정</h2>
 
-                        <div class="setting-item">
+                        <!-- Theme Setting -->
+                        <div class="setting-item"
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--glass-border);">
                             <div class="setting-info">
                                 <h4 data-i18n="theme_setting">테마 설정</h4>
-                                <p data-i18n="theme_description">다크 모드와 라이트 모드를 전환합니다.</p>
+                                <p data-i18n="theme_description"
+                                    style="font-size: 0.8rem; color: var(--text-secondary);">다크/라이트 모드 전환</p>
                             </div>
                             <div class="setting-control">
                                 <label class="switch">
@@ -206,13 +209,17 @@
                             </div>
                         </div>
 
-                        <div class="setting-item">
+                        <!-- Auto Refresh Setting -->
+                        <div class="setting-item"
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--glass-border);">
                             <div class="setting-info">
                                 <h4 data-i18n="auto_refresh_setting">자동 데이터 새로고침</h4>
-                                <p data-i18n="auto_refresh_description">데이터를 자동으로 갱신할 주기를 선택합니다.</p>
+                                <p data-i18n="auto_refresh_description"
+                                    style="font-size: 0.8rem; color: var(--text-secondary);">데이터 갱신 주기 선택</p>
                             </div>
                             <div class="setting-control">
-                                <select id="auto-refresh-select" class="btn-upload" style="margin: 0;">
+                                <select id="auto-refresh-select" class="btn-upload"
+                                    style="margin: 0; min-width: 120px;">
                                     <option value="0" data-i18n="refresh_none">없음</option>
                                     <option value="300000" data-i18n="refresh_5min">5분</option>
                                     <option value="600000" data-i18n="refresh_10min">10분</option>
@@ -221,13 +228,16 @@
                             </div>
                         </div>
 
-                        <div class="setting-item">
+                        <!-- AI Model Setting -->
+                        <div class="setting-item"
+                            style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--glass-border);">
                             <div class="setting-info">
                                 <h4 data-i18n="ai_model_setting">AI 모델 선택</h4>
-                                <p data-i18n="ai_model_description">분석에 사용할 AI 모델을 선택합니다.</p>
+                                <p data-i18n="ai_model_description"
+                                    style="font-size: 0.8rem; color: var(--text-secondary);">사용할 인공지능 모델</p>
                             </div>
                             <div class="setting-control">
-                                <select id="ai-model-select" class="btn-upload" style="margin: 0; width: 170px;">
+                                <select id="ai-model-select" class="btn-upload" style="margin: 0; min-width: 150px;">
                                     <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                                     <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
@@ -235,24 +245,23 @@
                             </div>
                         </div>
 
-                        <div class="setting-item" style="border-bottom: none; padding-bottom: 0.5rem;">
-                            <div class="setting-info">
+                        <!-- Gemini API Key Setting -->
+                        <div class="setting-item"
+                            style="flex-direction: column; align-items: stretch; padding: 1rem 0; border-bottom: none;">
+                            <div class="setting-info" style="margin-bottom: 1rem;">
                                 <h4 data-i18n="gemini_api_setting">Gemini API 키</h4>
-                                <p data-i18n="gemini_api_description">인공지능 분석을 사용하기 위해 API 키가 필요합니다.</p>
+                                <p data-i18n="gemini_api_description"
+                                    style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">인공지능
+                                    분석을 위해 API 키가 필요합니다 (무료 발급 가능).</p>
+                                <input type="password" id="gemini-api-key" placeholder="AIзаSy-..."
+                                    style="padding: 0.8rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: var(--sidebar-bg); color: white; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
                             </div>
-                        </div>
-                        <div style="padding-bottom: 1.5rem;">
-                            <div class="setting-control"
-                                style="flex-direction: column; align-items: stretch; width: 100%; gap: 0.75rem;">
-                                <input type="password" id="gemini-api-key" placeholder="AI-Key-..."
-                                    style="padding: 0.8rem; border-radius: 0.5rem; border: 1px solid var(--glass-border); background: var(--sidebar-bg); color: white; width: 100%;">
-                                <button id="verify-api-btn" class="btn-refresh"
-                                    style="justify-content: center; padding: 0.8rem; width: 100%;">
-                                    <i data-lucide="check-circle"></i> <span data-i18n="verify_btn">저장 및 확인</span>
-                                </button>
-                                <div id="api-status-msg"
-                                    style="font-size: 0.85rem; padding: 0.5rem; border-radius: 0.4rem; display: none; text-align: center;">
-                                </div>
+                            <button id="verify-api-btn" class="btn-refresh"
+                                style="justify-content: center; padding: 0.8rem; width: 100%; font-weight: 600;">
+                                <i data-lucide="check-circle"></i> <span data-i18n="verify_btn">환경 설정 저장 및 API 확인</span>
+                            </button>
+                            <div id="api-status-msg"
+                                style="font-size: 0.9rem; padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; display: none; text-align: center; border: 1px solid transparent;">
                             </div>
                         </div>
                     </section>
@@ -262,14 +271,15 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label" data-i18n="app_version">앱 버전</span>
-                                <span class="info-value">v1.2.0</span>
+                                <span class="info-value">v1.6.0</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label" data-i18n="last_build">마지막 빌드</span>
-                                <span class="info-value">2026-02-22</span>
+                                <span class="info-label" data-i18n="last_build">마지막 업데이트</span>
+                                <span class="info-value">2026-03-04</span>
                             </div>
                         </div>
                     </section>
+
                 </div>
             </div>
 
