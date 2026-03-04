@@ -54,6 +54,7 @@ const translations = {
         app_version: "앱 버전",
         last_build: "마지막 빌드",
         table_info: (total, count) => `총 ${total}개의 기기 중 ${count}개 표시`,
+        verify_btn: "저장 및 확인",
         menu_chat: "AI 채팅 분석",
         chat_ai_title: "Q.ANALYSIS AI",
         chat_ai_subtitle: "데이터 기반 인사이트 분석 중",
@@ -113,6 +114,7 @@ const translations = {
         app_version: "App Version",
         last_build: "Last Build",
         table_info: (total, count) => `Showing ${count} of ${total} devices`,
+        verify_btn: "Save & Verify",
         menu_chat: "AI Chat Analysis",
         chat_ai_title: "Q.ANALYSIS AI",
         chat_ai_subtitle: "Analyzing data-driven insights",
@@ -839,12 +841,57 @@ function initSettings() {
     }
 }
 
-// Save API Key on input
+// Save and Verify API Key
 document.addEventListener('DOMContentLoaded', () => {
     const keyInput = document.getElementById('gemini-api-key');
+    const verifyBtn = document.getElementById('verify-api-btn');
+    const statusMsg = document.getElementById('api-status-msg');
+
+    if (verifyBtn) {
+        verifyBtn.addEventListener('click', async () => {
+            const key = keyInput.value.trim();
+            if (!key) {
+                showStatus('API 키를 입력해주세요.', 'error');
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            showStatus(currentLang === 'ko' ? '연결 확인 중...' : 'Verifying connection...', 'warning');
+
+            try {
+                // Test call with simple prompt
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: 'Say "OK"' }] }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error.message || 'Verification Failed');
+                }
+
+                localStorage.setItem('dashboard_gemini_key', key);
+                showStatus(currentLang === 'ko' ? '연결 성공! 저장되었습니다.' : 'Step 1: Connection Successful! Saved.', 'success');
+            } catch (error) {
+                showStatus((currentLang === 'ko' ? '오류: ' : 'Error: ') + error.message, 'error');
+            } finally {
+                verifyBtn.disabled = false;
+            }
+        });
+    }
+
+    function showStatus(msg, type) {
+        statusMsg.innerText = msg;
+        statusMsg.style.display = 'block';
+        statusMsg.style.color = type === 'success' ? '#10B981' : (type === 'error' ? '#EF4444' : '#F59E0B');
+    }
+
     if (keyInput) {
-        keyInput.addEventListener('input', (e) => {
-            localStorage.setItem('dashboard_gemini_key', e.target.value);
+        keyInput.addEventListener('input', () => {
+            statusMsg.style.display = 'none'; // Hide status when typing
         });
     }
 });
