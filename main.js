@@ -704,7 +704,7 @@ Wait, always use a helpful tone.
 
 User: ${userMsg}`;
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key;
 
         console.log(`Calling Gemini API (${model}) via ${apiUrl}`);
 
@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Test call with selected model
                 const model = document.getElementById('ai-model-select').value;
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+                const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
