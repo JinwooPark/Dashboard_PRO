@@ -29,6 +29,8 @@
                 <a href="#" id="menu-devices"><i data-lucide="list"></i> <span data-i18n="menu_devices">기기 목록</span></a>
                 <a href="#" id="menu-analysis"><i data-lucide="bar-chart-2"></i> <span
                         data-i18n="menu_analysis">분석</span></a>
+                <a href="#" id="menu-chat"><i data-lucide="message-square"></i> <span data-i18n="menu_chat">AI 채팅
+                        분석</span></a>
                 <a href="#" id="menu-settings"><i data-lucide="settings"></i> <span
                         data-i18n="menu_settings">설정</span></a>
             </nav>
@@ -155,6 +157,36 @@
                 </section>
             </div>
 
+            <!-- Chat View Wrapper -->
+            <div id="chat-view-wrapper" class="hidden">
+                <div class="chat-container glass">
+                    <div class="chat-header">
+                        <div class="ai-avatar"><i data-lucide="bot"></i></div>
+                        <div class="ai-info">
+                            <h3 data-i18n="chat_ai_title">Q.ANALYSIS AI</h3>
+                            <p class="subtitle" data-i18n="chat_ai_subtitle">데이터 기반 인사이트 분석 중</p>
+                        </div>
+                    </div>
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Messages will appear here -->
+                        <div class="message system">
+                            <p data-i18n="chat_welcome">반가워요! 현재 불러온 데이터를 바탕으로 궁금한 점을 물어보세요.</p>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" data-i18n-placeholder="chat_placeholder"
+                            placeholder="데이터에 대해 질문해보세요... (예: 가장 설치가 많은 주는?)">
+                        <button id="chat-send-btn" class="btn-refresh">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="api-key-container glass" style="margin-top: 1.5rem; padding: 1rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;"
+                        data-i18n="api_key_help">실시간 AI 분석을 위해 Gemini API 키가 필요합니다. 설정 페이지에서 등록할 수 있습니다.</p>
+                </div>
+            </div>
+
             <!-- Settings View Wrapper -->
             <div id="settings-view-wrapper" class="hidden">
                 <div class="settings-container">
@@ -186,6 +218,17 @@
                                     <option value="600000" data-i18n="refresh_10min">10분</option>
                                     <option value="1800000" data-i18n="refresh_30min">30분</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4 data-i18n="gemini_api_setting">Gemini API 키</h4>
+                                <p data-i18n="gemini_api_description">인공지능 분석을 사용하기 위해 API 키가 필요합니다.</p>
+                            </div>
+                            <div class="setting-control">
+                                <input type="password" id="gemini-api-key" placeholder="AI-Key-..."
+                                    style="padding: 0.5rem; border-radius: 0.4rem; border: 1px solid var(--glass-border); background: var(--sidebar-bg); color: white; width: 220px;">
                             </div>
                         </div>
                     </section>

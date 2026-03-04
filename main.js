@@ -53,7 +53,15 @@ const translations = {
         system_info: "시스템 정보",
         app_version: "앱 버전",
         last_build: "마지막 빌드",
-        table_info: (total, count) => `총 ${total}개의 기기 중 ${count}개 표시`
+        table_info: (total, count) => `총 ${total}개의 기기 중 ${count}개 표시`,
+        menu_chat: "AI 채팅 분석",
+        chat_ai_title: "Q.ANALYSIS AI",
+        chat_ai_subtitle: "데이터 기반 인사이트 분석 중",
+        chat_welcome: "반가워요! 현재 불러온 데이터를 바탕으로 궁금한 점을 물어보세요. (예: 가장 설치가 많은 주는?, 오류가 가장 많은 모델은?)",
+        chat_placeholder: "데이터에 대해 질문해보세요...",
+        gemini_api_setting: "Gemini API 키",
+        gemini_api_description: "인공지능 분석을 사용하기 위해 API 키가 필요합니다.",
+        api_key_help: "실시간 AI 분석을 위해 Gemini API 키가 필요합니다. 설정 페이지에서 등록할 수 있습니다."
     },
     en: {
         menu_dashboard: "Dashboard",
@@ -104,7 +112,15 @@ const translations = {
         system_info: "System Info",
         app_version: "App Version",
         last_build: "Last Build",
-        table_info: (total, count) => `Showing ${count} of ${total} devices`
+        table_info: (total, count) => `Showing ${count} of ${total} devices`,
+        menu_chat: "AI Chat Analysis",
+        chat_ai_title: "Q.ANALYSIS AI",
+        chat_ai_subtitle: "Analyzing data-driven insights",
+        chat_welcome: "Hello! Ask me anything about the loaded data. (e.g., Which state has the most installs?, Which model has the most errors?)",
+        chat_placeholder: "Ask about the data...",
+        gemini_api_setting: "Gemini API Key",
+        gemini_api_description: "API Key is required to use AI analysis.",
+        api_key_help: "Gemini API Key is required for real-time AI analysis. You can register it in the settings page."
     }
 };
 
@@ -565,7 +581,9 @@ function setupEventListeners() {
     const menuDashboard = document.getElementById('menu-dashboard');
     const menuDevices = document.getElementById('menu-devices');
     const menuAnalysis = document.getElementById('menu-analysis');
+    const menuChat = document.getElementById('menu-chat');
     const menuSettings = document.getElementById('menu-settings');
+    const chatView = document.getElementById('chat-view-wrapper');
 
     function switchView(view) {
         // Reset visibility
@@ -577,7 +595,9 @@ function setupEventListeners() {
         menuDashboard.classList.remove('active');
         menuDevices.classList.remove('active');
         menuAnalysis.classList.remove('active');
+        menuChat.classList.remove('active');
         menuSettings.classList.remove('active');
+        chatView.classList.add('hidden');
 
         if (view === 'dashboard') {
             dashboardView.classList.remove('hidden');
@@ -593,13 +613,95 @@ function setupEventListeners() {
         } else if (view === 'settings') {
             settingsView.classList.remove('hidden'); // Show ONLY settings
             menuSettings.classList.add('active');
+        } else if (view === 'chat') {
+            chatView.classList.remove('hidden');
+            menuChat.classList.add('active');
         }
     }
 
     menuDashboard.addEventListener('click', (e) => { e.preventDefault(); switchView('dashboard'); });
     menuDevices.addEventListener('click', (e) => { e.preventDefault(); switchView('devices'); });
     menuAnalysis.addEventListener('click', (e) => { e.preventDefault(); switchView('analysis'); });
+    menuChat.addEventListener('click', (e) => { e.preventDefault(); switchView('chat'); });
     menuSettings.addEventListener('click', (e) => { e.preventDefault(); switchView('settings'); });
+
+    // Chat Logic
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatMessages = document.getElementById('chat-messages');
+
+    async function handleChat() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        appendMessage('user', text);
+        chatInput.value = '';
+
+        const apiKey = document.getElementById('gemini-api-key').value;
+        if (!apiKey) {
+            appendMessage('ai', currentLang === 'ko' ?
+                'API 키가 설정되어 있지 않습니다. 설정 메뉴에서 Gemini API 키를 입력해주세요.' :
+                'API Key is not set. Please enter Gemini API key in the settings menu.');
+            return;
+        }
+
+        const aiMsgDiv = appendMessage('ai', '...');
+        try {
+            const response = await callGeminiAI(text, apiKey);
+            aiMsgDiv.innerText = response;
+        } catch (error) {
+            aiMsgDiv.innerText = currentLang === 'ko' ?
+                'AI 분석 중 오류가 발생했습니다. 키가 유효한지 확인해주세요.' :
+                'An error occurred during AI analysis. Please check your API key.';
+        }
+    }
+
+    chatSendBtn.addEventListener('click', handleChat);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleChat();
+    });
+
+    function appendMessage(type, text) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        div.innerText = text;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return div;
+    }
+
+    async function callGeminiAI(userMsg, key) {
+        // Data Summarization for context
+        const summary = {
+            total: deviceData.length,
+            status: {
+                normal: deviceData.filter(d => d.Status === 'Normal').length,
+                warning: deviceData.filter(d => d.Status === 'Warning').length,
+                error: deviceData.filter(d => d.Status === 'Error').length
+            },
+            topStates: Array.from(new Set(deviceData.map(d => d.Address.match(/\s([A-Z]{2})\s\d{5}/)?.[1]).filter(s => s)))
+                .slice(0, 5),
+            models: [...new Set(deviceData.map(d => d['Model Name']))]
+        };
+
+        const dataContext = JSON.stringify(summary);
+        const prompt = `You are a data analyst for a renewable energy device dashboard.
+The current data summary is: ${dataContext}. 
+Users will ask questions about this data. Provide concise, insightful answers in ${currentLang === 'ko' ? 'Korean' : 'English'}.
+
+User: ${userMsg}`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
+    }
 
     // Language Selector with Persistence
     const langSelect = document.getElementById('lang-select');
@@ -715,7 +817,23 @@ function initSettings() {
         document.getElementById('auto-refresh-select').value = savedRefresh;
         startAutoRefresh(parseInt(savedRefresh));
     }
+
+    // Load API Key
+    const savedKey = localStorage.getItem('dashboard_gemini_key');
+    if (savedKey) {
+        document.getElementById('gemini-api-key').value = savedKey;
+    }
 }
+
+// Save API Key on input
+document.addEventListener('DOMContentLoaded', () => {
+    const keyInput = document.getElementById('gemini-api-key');
+    if (keyInput) {
+        keyInput.addEventListener('input', (e) => {
+            localStorage.setItem('dashboard_gemini_key', e.target.value);
+        });
+    }
+});
 
 function startAutoRefresh(ms) {
     if (refreshInterval) clearInterval(refreshInterval);
