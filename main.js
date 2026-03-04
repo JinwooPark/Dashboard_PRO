@@ -637,7 +637,7 @@ function setupEventListeners() {
         appendMessage('user', text);
         chatInput.value = '';
 
-        const apiKey = document.getElementById('gemini-api-key').value;
+        const apiKey = document.getElementById('gemini-api-key').value.trim();
         if (!apiKey) {
             appendMessage('ai', currentLang === 'ko' ?
                 'API 키가 설정되어 있지 않습니다. 설정 메뉴에서 Gemini API 키를 입력해주세요.' :
@@ -650,9 +650,10 @@ function setupEventListeners() {
             const response = await callGeminiAI(text, apiKey);
             aiMsgDiv.innerText = response;
         } catch (error) {
-            aiMsgDiv.innerText = currentLang === 'ko' ?
-                'AI 분석 중 오류가 발생했습니다. 키가 유효한지 확인해주세요.' :
-                'An error occurred during AI analysis. Please check your API key.';
+            console.error('Gemini API Error:', error);
+            aiMsgDiv.innerText = (currentLang === 'ko' ?
+                'AI 분석 중 오류가 발생했습니다: ' :
+                'An error occurred during AI analysis: ') + error.message;
         }
     }
 
@@ -679,7 +680,7 @@ function setupEventListeners() {
                 warning: deviceData.filter(d => d.Status === 'Warning').length,
                 error: deviceData.filter(d => d.Status === 'Error').length
             },
-            topStates: Array.from(new Set(deviceData.map(d => d.Address.match(/\s([A-Z]{2})\s\d{5}/)?.[1]).filter(s => s)))
+            topStates: Array.from(new Set(deviceData.map(d => (d.Address || '').match(/\s([A-Z]{2})\s\d{5}/)?.[1]).filter(s => s)))
                 .slice(0, 5),
             models: [...new Set(deviceData.map(d => d['Model Name']))]
         };
@@ -688,6 +689,7 @@ function setupEventListeners() {
         const prompt = `You are a data analyst for a renewable energy device dashboard.
 The current data summary is: ${dataContext}. 
 Users will ask questions about this data. Provide concise, insightful answers in ${currentLang === 'ko' ? 'Korean' : 'English'}.
+Wait, always use a helpful tone.
 
 User: ${userMsg}`;
 
@@ -700,6 +702,15 @@ User: ${userMsg}`;
         });
 
         const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message || 'API Error');
+        }
+
+        if (!data.candidates || data.candidates.length === 0) {
+            throw new Error('No response from AI candidates');
+        }
+
         return data.candidates[0].content.parts[0].text;
     }
 
