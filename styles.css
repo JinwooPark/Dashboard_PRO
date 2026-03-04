@@ -421,13 +421,18 @@ tr:hover td {
 .setting-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 1.5rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 1.5rem;
 }
 
 .setting-item:last-of-type {
     border-bottom: none;
+}
+
+.setting-info {
+    flex: 1;
 }
 
 .setting-info h4 {
@@ -439,6 +444,26 @@ tr:hover td {
 .setting-info p {
     font-size: 0.85rem;
     color: var(--text-secondary);
+}
+
+.setting-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    min-width: 200px;
+}
+
+@media (max-width: 650px) {
+    .setting-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .setting-control {
+        align-items: stretch;
+        width: 100%;
+    }
 }
 
 /* Toggle Switch Styles */
