@@ -646,10 +646,13 @@ function setupEventListeners() {
         }
 
         const aiMsgDiv = appendMessage('ai', '...');
+        aiMsgDiv.classList.add('loading-dots');
         try {
             const response = await callGeminiAI(text, apiKey);
+            aiMsgDiv.classList.remove('loading-dots');
             aiMsgDiv.innerText = response;
         } catch (error) {
+            aiMsgDiv.classList.remove('loading-dots');
             console.error('Gemini API Error:', error);
             aiMsgDiv.innerText = (currentLang === 'ko' ?
                 'AI 분석 중 오류가 발생했습니다: ' :
@@ -693,7 +696,7 @@ Wait, always use a helpful tone.
 
 User: ${userMsg}`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

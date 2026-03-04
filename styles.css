@@ -711,3 +711,31 @@ input:checked+.slider:before {
         height: 350px !important;
     }
 }
+
+.loading-dots::after {
+    content: '...';
+    display: inline-block;
+    animation: dots 1.5s steps(3, end) infinite;
+    width: 1em;
+}
+
+@keyframes dots {
+
+    0%,
+    20% {
+        content: '.';
+    }
+
+    40% {
+        content: '..';
+    }
+
+    60% {
+        content: '...';
+    }
+
+    80%,
+    100% {
+        content: '';
+    }
+}
