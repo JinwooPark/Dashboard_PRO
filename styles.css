@@ -32,7 +32,7 @@
 body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    overflow: hidden;
+    overflow-x: hidden;
     transition: background-color 0.4s ease, color 0.4s ease;
 }
 
@@ -518,4 +518,103 @@ input:checked+.slider:before {
 .info-value {
     font-size: 1rem;
     font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        padding: 1rem;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .logo {
+        margin-bottom: 0;
+        font-size: 1.2rem;
+    }
+
+    .nav-menu {
+        flex-direction: row;
+        gap: 0.25rem;
+    }
+
+    .nav-menu a {
+        padding: 0.5rem;
+    }
+
+    .nav-menu a span {
+        display: none;
+        /* Hide text on mobile */
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .header-right {
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .data-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .search-box input {
+        width: 100%;
+    }
+
+    .settings-container {
+        margin: 1rem 0;
+    }
+
+    /* Map height adjustment for smaller screens */
+    #map {
+        height: 350px !important;
+    }
 }
