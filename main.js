@@ -62,6 +62,8 @@ const translations = {
         chat_placeholder: "데이터에 대해 질문해보세요...",
         gemini_api_setting: "Gemini API 키",
         gemini_api_description: "인공지능 분석을 사용하기 위해 API 키가 필요합니다.",
+        ai_model_setting: "AI 모델 선택",
+        ai_model_description: "분석에 사용할 모델을 선택합니다. (Flash가 가장 빠릅니다)",
         api_key_help: "실시간 AI 분석을 위해 Gemini API 키가 필요합니다. 설정 페이지에서 등록할 수 있습니다."
     },
     en: {
@@ -122,6 +124,8 @@ const translations = {
         chat_placeholder: "Ask about the data...",
         gemini_api_setting: "Gemini API Key",
         gemini_api_description: "API Key is required to use AI analysis.",
+        ai_model_setting: "AI Model Selection",
+        ai_model_description: "Choose a model for analysis. (Flash is fastest)",
         api_key_help: "Gemini API Key is required for real-time AI analysis. You can register it in the settings page."
     }
 };
@@ -677,6 +681,8 @@ function setupEventListeners() {
     }
 
     async function callGeminiAI(userMsg, key) {
+        const model = document.getElementById('ai-model-select').value || 'gemini-1.5-flash';
+
         // Data Summarization for context
         const summary = {
             total: deviceData.length,
@@ -698,7 +704,11 @@ Wait, always use a helpful tone.
 
 User: ${userMsg}`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+
+        console.log(`Calling Gemini API (${model}) via ${apiUrl}`);
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -839,13 +849,26 @@ function initSettings() {
     if (savedKey) {
         document.getElementById('gemini-api-key').value = savedKey;
     }
+
+    // Load AI Model
+    const savedModel = localStorage.getItem('dashboard_ai_model');
+    if (savedModel) {
+        document.getElementById('ai-model-select').value = savedModel;
+    }
 }
 
-// Save and Verify API Key
+// Save Settings on change
 document.addEventListener('DOMContentLoaded', () => {
     const keyInput = document.getElementById('gemini-api-key');
+    const modelSelect = document.getElementById('ai-model-select');
     const verifyBtn = document.getElementById('verify-api-btn');
     const statusMsg = document.getElementById('api-status-msg');
+
+    if (modelSelect) {
+        modelSelect.addEventListener('change', (e) => {
+            localStorage.setItem('dashboard_ai_model', e.target.value);
+        });
+    }
 
     if (verifyBtn) {
         verifyBtn.addEventListener('click', async () => {
@@ -859,8 +882,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus(currentLang === 'ko' ? '연결 확인 중...' : 'Verifying connection...', 'warning');
 
             try {
-                // Test call with simple prompt
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                // Test call with selected model
+                const model = document.getElementById('ai-model-select').value;
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
