@@ -594,10 +594,16 @@ function initCharts() {
         acModuleCounts[bucketIndex] += 1;
     });
 
-    const acModuleCountLabels = Array.from({ length: 45 }, (_, count) =>
+    const acModuleBaseLabels = Array.from({ length: 45 }, (_, count) =>
         currentLang === 'ko' ? `${count}개` : `${count} modules`
     );
-    acModuleCountLabels.push(currentLang === 'ko' ? '45개 이상' : '45+ modules');
+    acModuleBaseLabels.push(currentLang === 'ko' ? '45개 이상' : '45+ modules');
+
+    const totalSites = acModuleCounts.reduce((sum, count) => sum + count, 0);
+    const getPercentage = siteCount => totalSites > 0 ? (siteCount / totalSites) * 100 : 0;
+    const acModuleCountLabels = acModuleBaseLabels.map((label, index) =>
+        `${label} (${getPercentage(acModuleCounts[index]).toFixed(1)}%)`
+    );
 
     const acModuleColors = Array.from({ length: 46 }, (_, index) => {
         if (index === 0) return '#64748B';
@@ -625,6 +631,16 @@ function initCharts() {
                 legend: {
                     position: 'bottom',
                     labels: { color: '#94A3B8', padding: 8, boxWidth: 10, font: { size: 10 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: context => {
+                            const siteCount = context.raw;
+                            const percentage = getPercentage(siteCount).toFixed(1);
+                            const countLabel = currentLang === 'ko' ? `${siteCount}개 사이트` : `${siteCount} sites`;
+                            return `${acModuleBaseLabels[context.dataIndex]}: ${countLabel} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
