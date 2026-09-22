@@ -284,6 +284,15 @@ function processData() {
     });
 }
 
+function getDisplayModelName(modelName) {
+    const modelNameMap = {
+        AACCB: 'AC Combiner',
+        AACES7601A: 'ESS'
+    };
+
+    return modelNameMap[modelName] || modelName || '-';
+}
+
 function updateUI() {
     const total = deviceData.length;
     const normal = deviceData.filter(d => d.Status === 'Normal').length;
@@ -567,7 +576,7 @@ function renderTable(data) {
             <td><span class="badge ${statusClass}">${row.Status || 'Unknown'}</span></td>
             <td>${row['Site ID'] || '-'}</td>
             <td>${row['Serial No.'] || '-'}</td>
-            <td>${row['Model Name'] || '-'}</td>
+            <td>${getDisplayModelName(row['Model Name'])}</td>
             <td>${parseInt(row['PV Capacity']).toLocaleString() || '0'} W</td>
             <td style="font-size: 0.75rem; color: #94A3B8;">${row['Address'] || '-'}</td>
         `;
@@ -692,7 +701,7 @@ function setupEventListeners() {
             },
             topStates: Array.from(new Set(deviceData.map(d => (d.Address || '').match(/\s([A-Z]{2})\s\d{5}/)?.[1]).filter(s => s)))
                 .slice(0, 5),
-            models: [...new Set(deviceData.map(d => d['Model Name']))]
+            models: [...new Set(deviceData.map(d => getDisplayModelName(d['Model Name'])))]
         };
 
         const dataContext = JSON.stringify(summary);
