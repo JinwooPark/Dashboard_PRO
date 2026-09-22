@@ -259,6 +259,10 @@ body {
     position: relative;
 }
 
+.chart-wrapper-tall {
+    height: 480px;
+}
+
 /* Table Section */
 .table-section {
     padding: 1.5rem;
