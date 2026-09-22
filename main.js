@@ -359,22 +359,24 @@ function initCharts() {
     // 2. State-wise Analysis (PV Capacity & # of AC Module)
     const stateData = {};
 
-    filteredData.forEach(d => {
+    filteredData.forEach((d, index) => {
         const address = d.Address || '';
         // Extract state: looking for 2-letter uppercase state code before zip (e.g., CA 90210)
         const stateMatch = address.match(/\s([A-Z]{2})\s\d{5}/);
         const state = stateMatch ? stateMatch[1] : 'Other';
 
         if (!stateData[state]) {
-            stateData[state] = { capacity: 0, modules: 0 };
+            stateData[state] = { capacity: 0, modules: 0, sites: new Set() };
         }
         stateData[state].capacity += parseFloat(d['PV Capacity']) || 0;
         stateData[state].modules += parseInt(d['# of AC Module']) || 0;
+        stateData[state].sites.add(d['Site ID'] || d['Serial No.'] || `row-${index}`);
     });
 
     const states = Object.keys(stateData).sort((a, b) => stateData[b].capacity - stateData[a].capacity).slice(0, 10);
     const capacities = states.map(s => stateData[s].capacity);
     const modules = states.map(s => stateData[s].modules);
+    const siteCounts = states.map(s => stateData[s].sites.size);
 
     const ctx2 = document.getElementById('stateAnalysisChart').getContext('2d');
     if (capacityChart) capacityChart.destroy();
@@ -400,6 +402,7 @@ function initCharts() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 y: {
                     type: 'linear',
@@ -423,7 +426,18 @@ function initCharts() {
                 }
             },
             plugins: {
-                legend: { labels: { color: '#94A3B8' } }
+                legend: { labels: { color: '#94A3B8' } },
+                tooltip: {
+                    callbacks: {
+                        footer: items => {
+                            if (!items.length) return '';
+                            const siteCount = siteCounts[items[0].dataIndex];
+                            return currentLang === 'ko'
+                                ? `사이트 수: ${siteCount.toLocaleString()}개`
+                                : `Sites: ${siteCount.toLocaleString()}`;
+                        }
+                    }
+                }
             }
         }
     });
