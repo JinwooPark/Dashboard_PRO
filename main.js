@@ -35,6 +35,7 @@ const translations = {
         col_site_id: "사이트 ID",
         col_serial_no: "시리얼 번호",
         col_model_name: "모델명",
+        col_pv_module_count: "PV Module 수",
         col_pv_capacity: "PV 용량",
         col_address: "주소",
         version_distribution_title: "EMS/GEM 버전별 사이트 수",
@@ -97,6 +98,7 @@ const translations = {
         col_site_id: "Site ID",
         col_serial_no: "Serial No.",
         col_model_name: "Model Name",
+        col_pv_module_count: "PV Module Count",
         col_pv_capacity: "PV Capacity",
         col_address: "Address",
         version_distribution_title: "Sites by EMS/GEM Version",
@@ -291,6 +293,19 @@ function getDisplayModelName(modelName) {
     };
 
     return modelNameMap[modelName] || modelName || '-';
+}
+
+function getPVModuleCount(pvCapacity) {
+    const capacity = parseFloat(pvCapacity);
+    if (!Number.isFinite(capacity) || capacity <= 0) return 0;
+
+    return capacity / 430;
+}
+
+function formatPVModuleCount(pvCapacity) {
+    return getPVModuleCount(pvCapacity).toLocaleString(undefined, {
+        maximumFractionDigits: 2
+    });
 }
 
 function updateUI() {
@@ -577,6 +592,7 @@ function renderTable(data) {
             <td>${row['Site ID'] || '-'}</td>
             <td>${row['Serial No.'] || '-'}</td>
             <td>${getDisplayModelName(row['Model Name'])}</td>
+            <td>${formatPVModuleCount(row['PV Capacity'])}</td>
             <td>${parseInt(row['PV Capacity']).toLocaleString() || '0'} W</td>
             <td style="font-size: 0.75rem; color: #94A3B8;">${row['Address'] || '-'}</td>
         `;
@@ -806,7 +822,10 @@ User: ${userMsg}`;
                 let valB = b[key];
 
                 // Handle numbers
-                if (key === 'PV Capacity') {
+                if (key === 'PV Module Count') {
+                    valA = getPVModuleCount(a['PV Capacity']);
+                    valB = getPVModuleCount(b['PV Capacity']);
+                } else if (key === 'PV Capacity') {
                     valA = parseFloat(valA) || 0;
                     valB = parseFloat(valB) || 0;
                 }
