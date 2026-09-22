@@ -2,6 +2,7 @@ let deviceData = [];
 let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, map;
 let markers = [];
 let currentLang = 'ko';
+let chatHistory = [];
 
 const translations = {
     ko: {
@@ -59,8 +60,8 @@ const translations = {
         verify_btn: "저장 및 확인",
         menu_chat: "AI 채팅",
         chat_ai_title: "Q.Bot",
-        chat_ai_subtitle: "데이터 기반 인사이트 분석 중",
-        chat_welcome: "반가워요! 현재 불러온 데이터를 바탕으로 궁금한 점을 물어보세요. (예: 가장 설치가 많은 주는?, 오류가 가장 많은 모델은?)",
+        chat_ai_subtitle: "상세 데이터 기반 분석",
+        chat_welcome: "반가워요! PV 용량, AC Module, 설치일, 버전, 지역과 상태에 대해 물어보세요. (예: AC Module이 가장 많은 주는?, SITE-1001의 버전은?)",
         chat_placeholder: "데이터에 대해 질문해보세요...",
         gemini_api_setting: "Gemini API 키",
         gemini_api_description: "인공지능 분석을 사용하기 위해 API 키가 필요합니다.",
@@ -123,8 +124,8 @@ const translations = {
         verify_btn: "Save & Verify",
         menu_chat: "AI Chat",
         chat_ai_title: "Q.Bot",
-        chat_ai_subtitle: "Analyzing data-driven insights",
-        chat_welcome: "Hello! Ask me anything about the loaded data. (e.g., Which state has the most installs?, Which model has the most errors?)",
+        chat_ai_subtitle: "Detailed data analysis",
+        chat_welcome: "Hello! Ask about PV capacity, AC Modules, installation dates, versions, locations, and status. (e.g., Which state has the most AC Modules?, What version is SITE-1001?)",
         chat_placeholder: "Ask about the data...",
         gemini_api_setting: "Gemini API Key",
         gemini_api_description: "API Key is required to use AI analysis.",
@@ -213,6 +214,7 @@ async function loadData() {
 
 function onDataLoaded(data) {
     deviceData = data;
+    chatHistory = [];
     processData();
     updateUI();
     initCharts();
@@ -670,6 +672,132 @@ function renderTable(data) {
     document.getElementById('table-info').innerText = translations[currentLang].table_info(deviceData.length, data.length);
 }
 
+function getStateFromAddress(address) {
+    return (address || '').match(/\s([A-Z]{2})\s\d{5}/)?.[1] || 'Unknown';
+}
+
+function getInstallMonth(dateString) {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString.split(' (')[0]);
+    if (Number.isNaN(date.getTime())) return 'Unknown';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function countValues(rows, field, formatter = value => value || 'Unknown') {
+    return rows.reduce((counts, row) => {
+        const key = formatter(row[field]);
+        counts[key] = (counts[key] || 0) + 1;
+        return counts;
+    }, {});
+}
+
+function sortRecord(record, limit = 100) {
+    return Object.fromEntries(
+        Object.entries(record)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, limit)
+    );
+}
+
+function buildAIDataContext(userMessage) {
+    const validPVCapacities = deviceData
+        .map(row => parseFloat(row['PV Capacity']))
+        .filter(value => Number.isFinite(value) && value >= 0);
+    const validACModules = deviceData
+        .map(row => parseInt(row['# of AC Module'], 10))
+        .filter(value => Number.isFinite(value) && value >= 0);
+
+    const summarizeGroup = (keyGetter, limit = 100) => {
+        const groups = {};
+        deviceData.forEach(row => {
+            const key = keyGetter(row) || 'Unknown';
+            if (!groups[key]) {
+                groups[key] = { records: 0, pvCapacityW: 0, acModules: 0, normal: 0, warning: 0, error: 0 };
+            }
+            const group = groups[key];
+            group.records += 1;
+            group.pvCapacityW += parseFloat(row['PV Capacity']) || 0;
+            group.acModules += parseInt(row['# of AC Module'], 10) || 0;
+            const statusKey = (row.Status || '').toLowerCase();
+            if (Object.hasOwn(group, statusKey)) group[statusKey] += 1;
+        });
+
+        return Object.fromEntries(
+            Object.entries(groups)
+                .sort(([, a], [, b]) => b.records - a.records)
+                .slice(0, limit)
+        );
+    };
+
+    const acModuleDistribution = {};
+    validACModules.forEach(count => {
+        const key = count >= 45 ? '45+' : String(count);
+        acModuleDistribution[key] = (acModuleDistribution[key] || 0) + 1;
+    });
+
+    const query = userMessage.toLowerCase();
+    const matchedSites = deviceData
+        .filter(row => {
+            const siteId = String(row['Site ID'] || '').toLowerCase();
+            const serialNo = String(row['Serial No.'] || '').toLowerCase();
+            return (siteId && query.includes(siteId)) || (serialNo && query.includes(serialNo));
+        })
+        .slice(0, 10)
+        .map(row => ({
+            siteId: row['Site ID'] || 'Unknown',
+            status: row.Status || 'Unknown',
+            model: getDisplayModelName(row['Model Name']),
+            pvCapacityW: parseFloat(row['PV Capacity']) || 0,
+            pvModuleCountAt430W: Number(getPVModuleCount(row['PV Capacity']).toFixed(2)),
+            acModuleCount: parseInt(row['# of AC Module'], 10) || 0,
+            installedDate: row['Installed Date'] || 'Unknown',
+            state: getStateFromAddress(row.Address),
+            versions: {
+                pcs: row['PCS Version'] || 'Unknown',
+                ems: row['EMS Version'] || 'Unknown',
+                bms: row['BMS Version'] || 'Unknown',
+                gem: row['GEM Version'] || 'Unknown'
+            },
+            consumptionCT: row['Consumption CT'] || 'Unknown',
+            externalProductionCT: row['External Production CT'] || 'Unknown'
+        }));
+
+    const totalPVCapacity = validPVCapacities.reduce((sum, value) => sum + value, 0);
+    const totalACModules = validACModules.reduce((sum, value) => sum + value, 0);
+
+    return {
+        scope: 'Aggregated from every currently loaded CSV row. Detailed rows are included only when the question contains an exact Site ID or Serial No.',
+        totals: {
+            records: deviceData.length,
+            uniqueSites: new Set(deviceData.map(row => row['Site ID']).filter(Boolean)).size,
+            status: sortRecord(countValues(deviceData, 'Status')),
+            pvCapacityW: {
+                total: totalPVCapacity,
+                average: validPVCapacities.length ? Number((totalPVCapacity / validPVCapacities.length).toFixed(2)) : 0,
+                maximum: validPVCapacities.reduce((max, value) => Math.max(max, value), 0)
+            },
+            acModules: {
+                total: totalACModules,
+                average: validACModules.length ? Number((totalACModules / validACModules.length).toFixed(2)) : 0,
+                maximum: validACModules.reduce((max, value) => Math.max(max, value), 0),
+                distribution: acModuleDistribution
+            }
+        },
+        byState: summarizeGroup(row => getStateFromAddress(row.Address), 60),
+        byModel: summarizeGroup(row => getDisplayModelName(row['Model Name'])),
+        installationsByMonth: sortRecord(countValues(deviceData, 'Installed Date', getInstallMonth), 60),
+        versions: {
+            pcs: sortRecord(countValues(deviceData, 'PCS Version')),
+            ems: sortRecord(countValues(deviceData, 'EMS Version')),
+            bms: sortRecord(countValues(deviceData, 'BMS Version')),
+            gem: sortRecord(countValues(deviceData, 'GEM Version'))
+        },
+        consumptionCT: sortRecord(countValues(deviceData, 'Consumption CT')),
+        externalProductionCT: sortRecord(countValues(deviceData, 'External Production CT')),
+        matchedSites
+    };
+}
+
 function setupEventListeners() {
     // Sidebar Navigation
     const dashboardView = document.getElementById('dashboard-view-wrapper');
@@ -749,6 +877,8 @@ function setupEventListeners() {
             const response = await callGeminiAI(text, apiKey);
             aiMsgDiv.classList.remove('loading-dots');
             aiMsgDiv.innerText = response;
+            chatHistory.push({ role: 'user', text }, { role: 'model', text: response });
+            chatHistory = chatHistory.slice(-6);
         } catch (error) {
             aiMsgDiv.classList.remove('loading-dots');
             console.error('Gemini API Error:', error);
@@ -773,28 +903,20 @@ function setupEventListeners() {
     }
 
     async function callGeminiAI(userMsg, key) {
-        const model = document.getElementById('ai-model-select').value || 'gemini-1.5-flash';
+        const model = document.getElementById('ai-model-select').value || 'gemini-2.5-flash';
+        const dataContext = buildAIDataContext(userMsg);
+        const prompt = `You are Q.Bot, a precise renewable-energy dashboard analyst.
+Answer in ${currentLang === 'ko' ? 'Korean' : 'English'} using only the supplied computed data context.
+Never invent missing values. If the context cannot answer the question, clearly say which data is unavailable.
+Treat counts and totals in the context as authoritative; do not recalculate them approximately.
+Keep answers concise, mention units, and explain the comparison or calculation when useful.
+Addresses and serial numbers are intentionally omitted from detailed output for privacy.
 
-        // Data Summarization for context
-        const summary = {
-            total: deviceData.length,
-            status: {
-                normal: deviceData.filter(d => d.Status === 'Normal').length,
-                warning: deviceData.filter(d => d.Status === 'Warning').length,
-                error: deviceData.filter(d => d.Status === 'Error').length
-            },
-            topStates: Array.from(new Set(deviceData.map(d => (d.Address || '').match(/\s([A-Z]{2})\s\d{5}/)?.[1]).filter(s => s)))
-                .slice(0, 5),
-            models: [...new Set(deviceData.map(d => getDisplayModelName(d['Model Name'])))]
-        };
+CURRENT DATA CONTEXT:
+${JSON.stringify(dataContext)}
 
-        const dataContext = JSON.stringify(summary);
-        const prompt = `You are a data analyst for a renewable energy device dashboard.
-The current data summary is: ${dataContext}. 
-Users will ask questions about this data. Provide concise, insightful answers in ${currentLang === 'ko' ? 'Korean' : 'English'}.
-Wait, always use a helpful tone.
-
-User: ${userMsg}`;
+CURRENT USER QUESTION:
+${userMsg}`;
 
         const apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + model + ":generateContent?key=" + key;
 
@@ -804,7 +926,17 @@ User: ${userMsg}`;
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
+                contents: [
+                    ...chatHistory.map(message => ({
+                        role: message.role,
+                        parts: [{ text: message.text }]
+                    })),
+                    { role: 'user', parts: [{ text: prompt }] }
+                ],
+                generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 2048
+                }
             })
         });
 
@@ -818,7 +950,13 @@ User: ${userMsg}`;
             throw new Error('No response from AI candidates');
         }
 
-        return data.candidates[0].content.parts[0].text;
+        const answer = data.candidates[0].content.parts
+            .map(part => part.text || '')
+            .join('')
+            .trim();
+
+        if (!answer) throw new Error('AI returned an empty response');
+        return answer;
     }
 
     // Language Selector with Persistence
