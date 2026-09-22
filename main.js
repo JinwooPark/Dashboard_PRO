@@ -1,5 +1,5 @@
 let deviceData = [];
-let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, map;
+let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, map;
 let markers = [];
 let currentLang = 'ko';
 
@@ -42,6 +42,7 @@ const translations = {
         monthly_install_title: "월별 사이트 설치 현황",
         consumption_ct_title: "Consumption CT 종류별 사이트 수",
         external_production_ct_title: "External Production CT 설치 유무",
+        ac_module_range_title: "AC Module 수 구간별 사이트 분포",
         settings_preferences: "사용자 설정",
         theme_setting: "테마 설정",
         theme_description: "다크 모드와 라이트 모드를 전환합니다.",
@@ -105,6 +106,7 @@ const translations = {
         monthly_install_title: "Monthly Site Installations",
         consumption_ct_title: "Sites by Consumption CT Type",
         external_production_ct_title: "External Production CT Installation",
+        ac_module_range_title: "Sites by AC Module Count",
         settings_preferences: "User Preferences",
         theme_setting: "Theme Setting",
         theme_description: "Switch between Dark and Light mode.",
@@ -566,6 +568,46 @@ function initCharts() {
             datasets: [{
                 data: Object.values(externalProdCounts),
                 backgroundColor: ['#10B981', '#94A3B8', '#F59E0B', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#94A3B8', padding: 20 } }
+            }
+        }
+    });
+
+    // 6. Site Distribution by AC Module Count
+    const modulesBySite = new Map();
+    filteredData.forEach((d, index) => {
+        const siteKey = d['Site ID'] || `row-${index}`;
+        const moduleCount = parseInt(d['# of AC Module'], 10) || 0;
+        modulesBySite.set(siteKey, Math.max(modulesBySite.get(siteKey) || 0, moduleCount));
+    });
+
+    const acModuleRanges = [0, 0, 0];
+    modulesBySite.forEach(moduleCount => {
+        if (moduleCount >= 1 && moduleCount <= 15) acModuleRanges[0] += 1;
+        else if (moduleCount >= 16 && moduleCount <= 44) acModuleRanges[1] += 1;
+        else if (moduleCount >= 45) acModuleRanges[2] += 1;
+    });
+
+    const acModuleRangeLabels = currentLang === 'ko'
+        ? ['1~15개 사이트', '16~44개 사이트', '45개 이상 사이트']
+        : ['1–15 modules', '16–44 modules', '45+ modules'];
+
+    const ctx6 = document.getElementById('acModuleRangeChart').getContext('2d');
+    if (acModuleRangeChart) acModuleRangeChart.destroy();
+    acModuleRangeChart = new Chart(ctx6, {
+        type: 'pie',
+        data: {
+            labels: acModuleRangeLabels,
+            datasets: [{
+                data: acModuleRanges,
+                backgroundColor: ['#4F46E5', '#10B981', '#F59E0B'],
                 borderWidth: 0
             }]
         },
