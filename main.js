@@ -28,6 +28,15 @@ const translations = {
         normal_working: "정상 작동",
         warning_alerts: "경고 알림",
         error_occurrence: "오류 발생",
+        connection_monitor_title: "연결 상태 모니터링",
+        connection_monitor_subtitle: "마지막 클라우드 연결 시각 기준 장기 미접속 현황",
+        connected_devices: "연결됨",
+        disconnected_devices: "미연결",
+        stale_24h: "24시간+ 미접속",
+        stale_7d: "7일+ 미접속",
+        stale_30d: "30일+ 미접속",
+        missing_connection_time: "연결일 누락",
+        monitoring_reference: time => `분석 기준: ${time}`,
         status_distribution: "기기 상태 분포",
         state_analysis_title: "미국 주별 PV 용량 및 AC 모듈 현황 (AACES7601A 제외)",
         device_list_detail: "상세 기기 목록",
@@ -92,6 +101,15 @@ const translations = {
         normal_working: "Normal",
         warning_alerts: "Warning",
         error_occurrence: "Error",
+        connection_monitor_title: "Connection Monitoring",
+        connection_monitor_subtitle: "Long-term inactivity based on the last cloud connection",
+        connected_devices: "Connected",
+        disconnected_devices: "Disconnected",
+        stale_24h: "Inactive 24h+",
+        stale_7d: "Inactive 7d+",
+        stale_30d: "Inactive 30d+",
+        missing_connection_time: "Missing Timestamp",
+        monitoring_reference: time => `Analyzed at: ${time}`,
         status_distribution: "Status Distribution",
         state_analysis_title: "US State PV Capacity & AC Modules (Excl. AACES7601A)",
         device_list_detail: "Detailed Device List",
@@ -312,6 +330,69 @@ function formatPVModuleCount(pvCapacity) {
     });
 }
 
+function parseDeviceTimestamp(value) {
+    const match = String(value || '').match(/^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})\s+\((\d{2}):(\d{2}):(\d{2})\)/);
+    if (!match) return null;
+
+    const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+    const [, monthName, day, year, hours, minutes, seconds] = match;
+    if (!(monthName in months)) return null;
+
+    return new Date(Date.UTC(
+        Number(year), months[monthName], Number(day),
+        Number(hours), Number(minutes), Number(seconds)
+    ));
+}
+
+function updateConnectionMonitoring() {
+    const now = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const metrics = {
+        connected: 0,
+        disconnected: 0,
+        stale24h: 0,
+        stale7d: 0,
+        stale30d: 0,
+        missing: 0
+    };
+
+    deviceData.forEach(device => {
+        const isConnected = String(device.Connect).toLowerCase() === 'true';
+        metrics[isConnected ? 'connected' : 'disconnected'] += 1;
+
+        const lastConnection = parseDeviceTimestamp(
+            device['Last Cloud Connection (utc+0)'] || device['Last Cloud Connection']
+        );
+        if (!lastConnection) {
+            metrics.missing += 1;
+            return;
+        }
+
+        const ageMs = Math.max(0, now.getTime() - lastConnection.getTime());
+        if (ageMs >= dayMs) metrics.stale24h += 1;
+        if (ageMs >= 7 * dayMs) metrics.stale7d += 1;
+        if (ageMs >= 30 * dayMs) metrics.stale30d += 1;
+    });
+
+    const total = deviceData.length;
+    const setMetric = (id, value) => {
+        document.getElementById(id).innerText = value.toLocaleString();
+        const rateElement = document.getElementById(`${id}-rate`);
+        const rate = total > 0 ? (value / total) * 100 : 0;
+        rateElement.innerText = `${rate.toFixed(1)}%`;
+    };
+
+    setMetric('connected-devices', metrics.connected);
+    setMetric('disconnected-devices', metrics.disconnected);
+    setMetric('stale-24h', metrics.stale24h);
+    setMetric('stale-7d', metrics.stale7d);
+    setMetric('stale-30d', metrics.stale30d);
+    setMetric('missing-connection-time', metrics.missing);
+
+    document.getElementById('connection-monitor-reference').innerText =
+        translations[currentLang].monitoring_reference(now.toLocaleString());
+}
+
 function updateUI() {
     const total = deviceData.length;
     const normal = deviceData.filter(d => d.Status === 'Normal').length;
@@ -322,6 +403,7 @@ function updateUI() {
     document.getElementById('normal-devices').innerText = normal.toLocaleString();
     document.getElementById('warning-devices').innerText = warning.toLocaleString();
     document.getElementById('error-devices').innerText = error.toLocaleString();
+    updateConnectionMonitoring();
 }
 
 function initCharts() {

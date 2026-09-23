@@ -109,6 +109,66 @@
                     </div>
                 </section>
 
+                <section class="monitoring-section glass">
+                    <div class="section-header monitoring-header">
+                        <div>
+                            <h3 data-i18n="connection_monitor_title">연결 상태 모니터링</h3>
+                            <p class="subtitle" data-i18n="connection_monitor_subtitle">마지막 클라우드 연결 시각 기준 장기 미접속 현황</p>
+                        </div>
+                        <span id="connection-monitor-reference" class="monitoring-reference">분석 기준: -</span>
+                    </div>
+                    <div class="monitoring-grid">
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon green"><i data-lucide="wifi"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="connected_devices">연결됨</h3>
+                                <p class="stat-value" id="connected-devices">0</p>
+                                <span class="stat-rate" id="connected-devices-rate">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon red"><i data-lucide="wifi-off"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="disconnected_devices">미연결</h3>
+                                <p class="stat-value" id="disconnected-devices">0</p>
+                                <span class="stat-rate" id="disconnected-devices-rate">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon yellow"><i data-lucide="clock-3"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="stale_24h">24시간+ 미접속</h3>
+                                <p class="stat-value" id="stale-24h">0</p>
+                                <span class="stat-rate" id="stale-24h-rate">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon yellow"><i data-lucide="calendar-clock"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="stale_7d">7일+ 미접속</h3>
+                                <p class="stat-value" id="stale-7d">0</p>
+                                <span class="stat-rate" id="stale-7d-rate">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon red"><i data-lucide="archive"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="stale_30d">30일+ 미접속</h3>
+                                <p class="stat-value" id="stale-30d">0</p>
+                                <span class="stat-rate" id="stale-30d-rate">0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card monitoring-card">
+                            <div class="stat-icon blue"><i data-lucide="circle-help"></i></div>
+                            <div class="stat-info">
+                                <h3 data-i18n="missing_connection_time">연결일 누락</h3>
+                                <p class="stat-value" id="missing-connection-time">0</p>
+                                <span class="stat-rate" id="missing-connection-time-rate">0.0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Charts Section (Summary Charts Only) -->
                 <section class="charts-section">
                     <div class="chart-container glass">
@@ -281,11 +341,11 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label" data-i18n="app_version">버전</span>
-                                <span class="info-value">v1.8.3</span>
+                                <span class="info-value">v1.9.0</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label" data-i18n="last_build">마지막 업데이트</span>
-                                <span class="info-value">2026-09-22</span>
+                                <span class="info-value">2026-09-23</span>
                             </div>
                         </div>
                     </section>
@@ -335,7 +395,7 @@
             </section>
         </main>
     </div>
-    <script src="main.js?v=1.8.3"></script>
+    <script src="main.js?v=1.9.0"></script>
     <script>
         lucide.createIcons();
     </script>

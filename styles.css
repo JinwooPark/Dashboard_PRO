@@ -233,6 +233,37 @@ body {
     margin-top: 0.25rem;
 }
 
+.monitoring-section {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.monitoring-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.monitoring-reference,
+.stat-rate {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.monitoring-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.monitoring-card {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.75rem;
+}
+
 /* Charts Section */
 .charts-section {
     display: grid;
@@ -715,6 +746,14 @@ input:checked+.slider:before {
     .stats-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+
+    .monitoring-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .monitoring-header {
+        flex-direction: column;
     }
 
     .charts-section {
