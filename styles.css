@@ -269,6 +269,62 @@ body {
     margin-bottom: 2rem;
 }
 
+.operations-analysis-section {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.operations-chart-grid,
+.quality-history-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.quality-history-grid {
+    margin-top: 1rem;
+}
+
+.quality-panel {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.75rem;
+}
+
+.quality-panel h4 {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.quality-alert-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.quality-alert {
+    padding: 0.8rem;
+    border-radius: 0.65rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.quality-alert strong,
+.quality-alert span {
+    display: block;
+}
+
+.quality-alert strong {
+    margin-top: 0.25rem;
+    font-size: 1.1rem;
+}
+
+.quality-alert span {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
 .firmware-summary-grid,
 .firmware-chart-grid {
     display: grid;
@@ -807,7 +863,10 @@ input:checked+.slider:before {
     }
 
     .firmware-summary-grid,
-    .firmware-chart-grid {
+    .firmware-chart-grid,
+    .operations-chart-grid,
+    .quality-history-grid,
+    .quality-alert-list {
         grid-template-columns: 1fr;
     }
 

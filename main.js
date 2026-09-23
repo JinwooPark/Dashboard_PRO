@@ -1,5 +1,5 @@
 let deviceData = [];
-let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, emsHealthChart, gemHealthChart, map;
+let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, emsHealthChart, gemHealthChart, stateHealthChart, siteCompositionChart, uploadTrendChart, map;
 let markers = [];
 let currentLang = 'ko';
 let chatHistory = [];
@@ -47,6 +47,12 @@ const translations = {
         installed_devices: count => `${count.toLocaleString()}대 설치`,
         ems_health_chart: "EMS 버전별 Warning·Error 비율",
         gem_health_chart: "GEM 버전별 Warning·Error 비율",
+        operations_analysis_title: "운영 분석 및 데이터 품질",
+        state_health_chart: "주별 연결률·장애율",
+        site_composition_chart: "사이트 구성 분석",
+        data_quality_title: "데이터 품질 경보",
+        upload_history_title: "업로드 이력 및 추세 비교",
+        upload_history_empty: "업로드한 CSV 이력이 쌓이면 추세가 표시됩니다.",
         status_distribution: "기기 상태 분포",
         state_analysis_title: "미국 주별 PV 용량 및 AC 모듈 현황 (AACES7601A 제외)",
         device_list_detail: "상세 기기 목록",
@@ -130,6 +136,12 @@ const translations = {
         installed_devices: count => `${count.toLocaleString()} installed`,
         ems_health_chart: "Warning & Error Rate by EMS Version",
         gem_health_chart: "Warning & Error Rate by GEM Version",
+        operations_analysis_title: "Operations Analysis & Data Quality",
+        state_health_chart: "Connection & Issue Rate by State",
+        site_composition_chart: "Site Composition Analysis",
+        data_quality_title: "Data Quality Alerts",
+        upload_history_title: "Upload History & Trend Comparison",
+        upload_history_empty: "Trends will appear after CSV uploads are recorded.",
         status_distribution: "Status Distribution",
         state_analysis_title: "US State PV Capacity & AC Modules (Excl. AACES7601A)",
         device_list_detail: "Detailed Device List",
@@ -250,10 +262,11 @@ async function loadData() {
     }
 }
 
-function onDataLoaded(data) {
+function onDataLoaded(data, options = {}) {
     deviceData = data;
     chatHistory = [];
     processData();
+    if (options.recordHistory) saveUploadSnapshot(options.source || 'Uploaded CSV');
     updateUI();
     initCharts();
     initMap(); // Initialize and render map
@@ -364,8 +377,7 @@ function parseDeviceTimestamp(value) {
     ));
 }
 
-function updateConnectionMonitoring() {
-    const now = new Date();
+function getConnectionMetrics(now = new Date()) {
     const dayMs = 24 * 60 * 60 * 1000;
     const metrics = {
         connected: 0,
@@ -394,6 +406,13 @@ function updateConnectionMonitoring() {
         if (ageMs >= 30 * dayMs) metrics.stale30d += 1;
     });
 
+    return metrics;
+}
+
+function updateConnectionMonitoring() {
+    const now = new Date();
+    const metrics = getConnectionMetrics(now);
+
     const total = deviceData.length;
     const setMetric = (id, value) => {
         document.getElementById(id).innerText = value.toLocaleString();
@@ -411,6 +430,36 @@ function updateConnectionMonitoring() {
 
     document.getElementById('connection-monitor-reference').innerText =
         translations[currentLang].monitoring_reference(now.toLocaleString());
+}
+
+const UPLOAD_HISTORY_KEY = 'dashboard_upload_history_v1';
+
+function getUploadHistory() {
+    try {
+        return JSON.parse(localStorage.getItem(UPLOAD_HISTORY_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveUploadSnapshot(source) {
+    const connection = getConnectionMetrics();
+    const issues = deviceData.filter(row => row.Status === 'Warning' || row.Status === 'Error').length;
+    const total = deviceData.length;
+    const history = getUploadHistory();
+    history.push({
+        timestamp: new Date().toISOString(),
+        source,
+        total,
+        connectedRate: total ? Number(((connection.connected / total) * 100).toFixed(2)) : 0,
+        issueRate: total ? Number(((issues / total) * 100).toFixed(2)) : 0,
+        stale7d: connection.stale7d
+    });
+    try {
+        localStorage.setItem(UPLOAD_HISTORY_KEY, JSON.stringify(history.slice(-30)));
+    } catch (error) {
+        console.warn('Upload history could not be saved:', error);
+    }
 }
 
 function updateUI() {
@@ -875,6 +924,168 @@ function initCharts() {
     updateVersionSummary('gem', gemHealth);
     emsHealthChart = createVersionHealthChart('emsHealthChart', emsHealth, emsHealthChart);
     gemHealthChart = createVersionHealthChart('gemHealthChart', gemHealth, gemHealthChart);
+
+    // 8. State connection and issue rates
+    const stateHealth = {};
+    deviceData.forEach(device => {
+        const state = getStateFromAddress(device.Address);
+        if (!stateHealth[state]) stateHealth[state] = { total: 0, connected: 0, issues: 0 };
+        stateHealth[state].total += 1;
+        if (String(device.Connect).toLowerCase() === 'true') stateHealth[state].connected += 1;
+        if (device.Status === 'Warning' || device.Status === 'Error') stateHealth[state].issues += 1;
+    });
+    const stateHealthRows = Object.entries(stateHealth)
+        .filter(([state]) => state !== 'Unknown')
+        .sort(([, a], [, b]) => b.total - a.total)
+        .slice(0, 15);
+    if (stateHealthChart) stateHealthChart.destroy();
+    stateHealthChart = new Chart(document.getElementById('stateHealthChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: stateHealthRows.map(([state]) => state),
+            datasets: [
+                {
+                    label: currentLang === 'ko' ? '연결률' : 'Connection Rate',
+                    data: stateHealthRows.map(([, value]) => (value.connected / value.total) * 100),
+                    backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                    rawCounts: stateHealthRows.map(([, value]) => value.connected)
+                },
+                {
+                    label: currentLang === 'ko' ? '장애율' : 'Issue Rate',
+                    data: stateHealthRows.map(([, value]) => (value.issues / value.total) * 100),
+                    backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                    rawCounts: stateHealthRows.map(([, value]) => value.issues)
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { color: '#94A3B8', callback: value => `${value}%` }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+            },
+            plugins: {
+                legend: { labels: { color: '#94A3B8' } },
+                tooltip: {
+                    callbacks: {
+                        label: context => `${context.dataset.label}: ${context.raw.toFixed(1)}% (${context.dataset.rawCounts[context.dataIndex].toLocaleString()})`,
+                        footer: items => currentLang === 'ko'
+                            ? `전체: ${stateHealthRows[items[0].dataIndex][1].total.toLocaleString()}대`
+                            : `Total: ${stateHealthRows[items[0].dataIndex][1].total.toLocaleString()}`
+                    }
+                }
+            }
+        }
+    });
+
+    // 9. Site composition by unique Site ID
+    const modelsBySite = new Map();
+    deviceData.forEach((device, index) => {
+        const siteKey = device['Site ID'] || `row-${index}`;
+        if (!modelsBySite.has(siteKey)) modelsBySite.set(siteKey, []);
+        modelsBySite.get(siteKey).push(device['Model Name']);
+    });
+    const siteComposition = { acOnly: 0, essOnly: 0, combined: 0, other: 0 };
+    modelsBySite.forEach(models => {
+        const hasAC = models.includes('AACCB');
+        const hasESS = models.includes('AACES7601A');
+        if (hasAC && hasESS) siteComposition.combined += 1;
+        else if (hasAC) siteComposition.acOnly += 1;
+        else if (hasESS) siteComposition.essOnly += 1;
+        else siteComposition.other += 1;
+    });
+    const siteCompositionLabels = currentLang === 'ko'
+        ? ['AC Combiner만', 'ESS만', 'AC Combiner + ESS', '기타']
+        : ['AC Combiner only', 'ESS only', 'AC Combiner + ESS', 'Other'];
+    if (siteCompositionChart) siteCompositionChart.destroy();
+    siteCompositionChart = new Chart(document.getElementById('siteCompositionChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: siteCompositionLabels,
+            datasets: [{
+                data: [siteComposition.acOnly, siteComposition.essOnly, siteComposition.combined, siteComposition.other],
+                backgroundColor: ['#4F46E5', '#F59E0B', '#10B981', '#94A3B8'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#94A3B8', padding: 14 } },
+                tooltip: {
+                    callbacks: {
+                        label: context => {
+                            const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                            const rate = total ? (context.raw / total) * 100 : 0;
+                            return `${context.label}: ${context.raw.toLocaleString()} (${rate.toFixed(1)}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 10. Data quality alerts
+    const siteIdCounts = deviceData.reduce((counts, device) => {
+        const id = device['Site ID'];
+        if (id) counts[id] = (counts[id] || 0) + 1;
+        return counts;
+    }, {});
+    const qualityAlerts = [
+        [currentLang === 'ko' ? '상태 누락' : 'Missing status', deviceData.filter(row => !row.Status).length],
+        [currentLang === 'ko' ? 'PV 용량 누락' : 'Missing PV capacity', deviceData.filter(row => !row['PV Capacity']).length],
+        [currentLang === 'ko' ? '설치일 누락' : 'Missing install date', deviceData.filter(row => !row['Installed Date']).length],
+        [currentLang === 'ko' ? 'EMS/GEM 버전 누락' : 'Missing EMS/GEM version', deviceData.filter(row => !row['EMS Version'] || (row['Model Name'] === 'AACCB' && !row['GEM Version'])).length],
+        [currentLang === 'ko' ? '좌표 검토 필요' : 'Coordinate review', deviceData.filter(row => {
+            const lat = parseFloat(row.Latitude);
+            const lng = parseFloat(row.Longitude);
+            return !Number.isFinite(lat) || !Number.isFinite(lng) || lat < 18 || lat > 72 || lng < -180 || lng > -60;
+        }).length],
+        [currentLang === 'ko' ? '복수 장비 사이트' : 'Multi-device sites', Object.values(siteIdCounts).filter(count => count > 1).length]
+    ];
+    document.getElementById('data-quality-alerts').innerHTML = qualityAlerts.map(([label, count]) => `
+        <div class="quality-alert"><span>${label}</span><strong>${count.toLocaleString()}</strong></div>
+    `).join('');
+
+    // 11. Local upload history trends
+    const uploadHistory = getUploadHistory();
+    document.getElementById('upload-history-empty').style.display = uploadHistory.length ? 'none' : 'block';
+    if (uploadTrendChart) uploadTrendChart.destroy();
+    uploadTrendChart = new Chart(document.getElementById('uploadTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: uploadHistory.map(item => new Date(item.timestamp).toLocaleString()),
+            datasets: [
+                {
+                    label: currentLang === 'ko' ? '연결률' : 'Connection Rate',
+                    data: uploadHistory.map(item => item.connectedRate),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    tension: 0.25
+                },
+                {
+                    label: currentLang === 'ko' ? '장애율' : 'Issue Rate',
+                    data: uploadHistory.map(item => item.issueRate),
+                    borderColor: '#EF4444',
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    tension: 0.25
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { color: '#94A3B8', callback: value => `${value}%` }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { ticks: { color: '#94A3B8', maxTicksLimit: 6 }, grid: { display: false } }
+            },
+            plugins: { legend: { labels: { color: '#94A3B8' } } }
+        }
+    });
 }
 
 function renderTable(data) {
@@ -1221,7 +1432,7 @@ ${userMsg}`;
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    onDataLoaded(results.data);
+                    onDataLoaded(results.data, { recordHistory: true, source: file.name });
                     setStatus(`${file.name} ${translations[currentLang].load_success}`, 'success');
                 },
                 error: (err) => {
