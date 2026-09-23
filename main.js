@@ -1,5 +1,5 @@
 let deviceData = [];
-let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, map;
+let statusChart, capacityChart, versionChart, monthlyInstallChart, consumptionCTChart, externalProductionCTChart, acModuleRangeChart, emsHealthChart, gemHealthChart, map;
 let markers = [];
 let currentLang = 'ko';
 let chatHistory = [];
@@ -37,6 +37,16 @@ const translations = {
         stale_30d: "30일+ 미접속",
         missing_connection_time: "연결일 누락",
         monitoring_reference: time => `분석 기준: ${time}`,
+        firmware_health_title: "EMS/GEM 버전별 Warning·Error 비율 및 업데이트 대상 분석",
+        firmware_health_subtitle: "최다 설치 버전을 운영 표준으로 간주한 업데이트 검토 현황",
+        ems_standard_version: "EMS 표준 버전",
+        gem_standard_version: "GEM 표준 버전",
+        ems_update_candidates: "EMS 업데이트 검토",
+        gem_update_candidates: "GEM 업데이트 검토",
+        version_missing: count => `버전 누락 ${count.toLocaleString()}대`,
+        installed_devices: count => `${count.toLocaleString()}대 설치`,
+        ems_health_chart: "EMS 버전별 Warning·Error 비율",
+        gem_health_chart: "GEM 버전별 Warning·Error 비율",
         status_distribution: "기기 상태 분포",
         state_analysis_title: "미국 주별 PV 용량 및 AC 모듈 현황 (AACES7601A 제외)",
         device_list_detail: "상세 기기 목록",
@@ -110,6 +120,16 @@ const translations = {
         stale_30d: "Inactive 30d+",
         missing_connection_time: "Missing Timestamp",
         monitoring_reference: time => `Analyzed at: ${time}`,
+        firmware_health_title: "EMS/GEM Warning & Error Rates and Update Review",
+        firmware_health_subtitle: "Update review using the most deployed version as the operational standard",
+        ems_standard_version: "EMS Standard Version",
+        gem_standard_version: "GEM Standard Version",
+        ems_update_candidates: "EMS Update Review",
+        gem_update_candidates: "GEM Update Review",
+        version_missing: count => `${count.toLocaleString()} missing versions`,
+        installed_devices: count => `${count.toLocaleString()} installed`,
+        ems_health_chart: "Warning & Error Rate by EMS Version",
+        gem_health_chart: "Warning & Error Rate by GEM Version",
         status_distribution: "Status Distribution",
         state_analysis_title: "US State PV Capacity & AC Modules (Excl. AACES7601A)",
         device_list_detail: "Detailed Device List",
@@ -743,6 +763,118 @@ function initCharts() {
             }
         }
     });
+
+    // 7. EMS/GEM version health and update review
+    const buildVersionHealth = field => {
+        const buckets = {};
+        let missing = 0;
+
+        deviceData.forEach(device => {
+            const version = device[field] || '';
+            if (!version) {
+                missing += 1;
+                return;
+            }
+
+            if (!buckets[version]) buckets[version] = { version, total: 0, warning: 0, error: 0 };
+            const bucket = buckets[version];
+            bucket.total += 1;
+            if (device.Status === 'Warning') bucket.warning += 1;
+            if (device.Status === 'Error') bucket.error += 1;
+        });
+
+        const versions = Object.values(buckets).sort((a, b) => b.total - a.total);
+        const standard = versions[0] || { version: '-', total: 0 };
+        const validTotal = versions.reduce((sum, item) => sum + item.total, 0);
+
+        return {
+            versions,
+            standard,
+            missing,
+            updateCandidates: Math.max(0, validTotal - standard.total)
+        };
+    };
+
+    const updateVersionSummary = (prefix, health) => {
+        document.getElementById(`${prefix}-standard-version`).innerText = health.standard.version;
+        document.getElementById(`${prefix}-standard-detail`).innerText =
+            translations[currentLang].installed_devices(health.standard.total);
+        document.getElementById(`${prefix}-update-candidates`).innerText =
+            health.updateCandidates.toLocaleString();
+        document.getElementById(`${prefix}-update-detail`).innerText =
+            translations[currentLang].version_missing(health.missing);
+    };
+
+    const createVersionHealthChart = (canvasId, health, existingChart) => {
+        if (existingChart) existingChart.destroy();
+        const displayedVersions = health.versions.slice(0, 10);
+        const warningRates = displayedVersions.map(item => item.total ? (item.warning / item.total) * 100 : 0);
+        const errorRates = displayedVersions.map(item => item.total ? (item.error / item.total) * 100 : 0);
+
+        return new Chart(document.getElementById(canvasId).getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: displayedVersions.map(item => item.version),
+                datasets: [
+                    {
+                        label: 'Warning',
+                        data: warningRates,
+                        rawCounts: displayedVersions.map(item => item.warning),
+                        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Error',
+                        data: errorRates,
+                        rawCounts: displayedVersions.map(item => item.error),
+                        backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#94A3B8', callback: value => `${value}%` },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    x: {
+                        ticks: { color: '#94A3B8', maxRotation: 45, minRotation: 25 },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#94A3B8' } },
+                    tooltip: {
+                        callbacks: {
+                            label: context => {
+                                const count = context.dataset.rawCounts[context.dataIndex];
+                                return `${context.dataset.label}: ${context.raw.toFixed(1)}% (${count.toLocaleString()})`;
+                            },
+                            footer: items => {
+                                if (!items.length) return '';
+                                const total = displayedVersions[items[0].dataIndex].total;
+                                return currentLang === 'ko'
+                                    ? `설치 대수: ${total.toLocaleString()}대`
+                                    : `Installed: ${total.toLocaleString()}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const emsHealth = buildVersionHealth('EMS Version');
+    const gemHealth = buildVersionHealth('GEM Version');
+    updateVersionSummary('ems', emsHealth);
+    updateVersionSummary('gem', gemHealth);
+    emsHealthChart = createVersionHealthChart('emsHealthChart', emsHealth, emsHealthChart);
+    gemHealthChart = createVersionHealthChart('gemHealthChart', gemHealth, gemHealthChart);
 }
 
 function renderTable(data) {

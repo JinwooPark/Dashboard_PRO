@@ -264,6 +264,60 @@ body {
     border-radius: 0.75rem;
 }
 
+.firmware-health-section {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.firmware-summary-grid,
+.firmware-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.firmware-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 1.5rem;
+}
+
+.firmware-summary-card,
+.firmware-chart-panel {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.75rem;
+}
+
+.firmware-summary-card {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.firmware-summary-card span,
+.firmware-summary-card small {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.firmware-summary-card strong {
+    font-size: 1.15rem;
+}
+
+.firmware-chart-panel {
+    padding: 1rem;
+}
+
+.firmware-chart-panel h4 {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.firmware-chart-wrapper {
+    height: 300px;
+}
+
 /* Charts Section */
 .charts-section {
     display: grid;
@@ -749,6 +803,11 @@ input:checked+.slider:before {
     }
 
     .monitoring-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .firmware-summary-grid,
+    .firmware-chart-grid {
         grid-template-columns: 1fr;
     }
 

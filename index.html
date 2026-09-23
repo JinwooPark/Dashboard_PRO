@@ -184,6 +184,49 @@
                         </div>
                     </div>
                 </section>
+
+                <section class="firmware-health-section glass">
+                    <div class="section-header">
+                        <h3 data-i18n="firmware_health_title">EMS/GEM 버전별 Warning·Error 비율 및 업데이트 대상 분석</h3>
+                        <p class="subtitle" data-i18n="firmware_health_subtitle">최다 설치 버전을 운영 표준으로 간주한 업데이트 검토 현황</p>
+                    </div>
+                    <div class="firmware-summary-grid">
+                        <div class="firmware-summary-card">
+                            <span data-i18n="ems_standard_version">EMS 표준 버전</span>
+                            <strong id="ems-standard-version">-</strong>
+                            <small id="ems-standard-detail">-</small>
+                        </div>
+                        <div class="firmware-summary-card">
+                            <span data-i18n="ems_update_candidates">EMS 업데이트 검토</span>
+                            <strong id="ems-update-candidates">0</strong>
+                            <small id="ems-update-detail">-</small>
+                        </div>
+                        <div class="firmware-summary-card">
+                            <span data-i18n="gem_standard_version">GEM 표준 버전</span>
+                            <strong id="gem-standard-version">-</strong>
+                            <small id="gem-standard-detail">-</small>
+                        </div>
+                        <div class="firmware-summary-card">
+                            <span data-i18n="gem_update_candidates">GEM 업데이트 검토</span>
+                            <strong id="gem-update-candidates">0</strong>
+                            <small id="gem-update-detail">-</small>
+                        </div>
+                    </div>
+                    <div class="firmware-chart-grid">
+                        <div class="firmware-chart-panel">
+                            <h4 data-i18n="ems_health_chart">EMS 버전별 Warning·Error 비율</h4>
+                            <div class="chart-wrapper firmware-chart-wrapper">
+                                <canvas id="emsHealthChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="firmware-chart-panel">
+                            <h4 data-i18n="gem_health_chart">GEM 버전별 Warning·Error 비율</h4>
+                            <div class="chart-wrapper firmware-chart-wrapper">
+                                <canvas id="gemHealthChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <!-- Analysis View Wrapper -->
@@ -341,7 +384,7 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label" data-i18n="app_version">버전</span>
-                                <span class="info-value">v1.9.0</span>
+                                <span class="info-value">v1.10.0</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label" data-i18n="last_build">마지막 업데이트</span>
@@ -395,7 +438,7 @@
             </section>
         </main>
     </div>
-    <script src="main.js?v=1.9.0"></script>
+    <script src="main.js?v=1.10.0"></script>
     <script>
         lucide.createIcons();
     </script>
